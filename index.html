@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>꽃밭 집중 타이머 (Flower Garden Focus)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body { font-family: 'Pretendard', sans-serif; background-color: #faf8f5; }
+        
+        /* 타이머 작동 중 가벼운 펄스 애니메이션 효과 */
+        @keyframes pulse-ring {
+            0 { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(253, 37, 91, 0.3); }
+            70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(253, 37, 91, 0); }
+            100% { transform: scale(0.98); box-shadow: 0 0 0 0 rgba(253, 37, 91, 0); }
+        }
+        .timer-active { animation: pulse-ring 2s infinite; }
+        
+        /* 커스텀 슬라이더 바 디자인 */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%;
+            background: #fd255b; cursor: pointer; margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; cursor: pointer; background: #fee2e2; border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-gray-800 p-6">
+
+    <header class="max-w-6xl mx-auto flex justify-between items-center mb-6">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-pink-500 rounded-full flex items-center justify-center text-white text-2xl shadow-sm">🌸</div>
+            <div>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-xl font-bold">꽃밭 집중 타이머 </h1>
+                    <span class="text-xs font-bold text-pink-600 bg-pink-100 px-2 py-0.5 rounded-full border border-pink-200">V1.1</span>
+                </div>
+            </div>
+        </div>
+        <!--<button class="bg-white text-gray-600 text-xs font-semibold py-2 px-4 rounded-full shadow-sm border border-gray-200 hover:bg-gray-50 transition flex items-center gap-1">
+            <i class="fa-regular fa-circle-question text-pink-500"></i> 정원 가꾸기 수칙
+        </button>-->
+    </header>
+
+    <nav class="max-w-6xl mx-auto flex gap-2 mb-6 bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100 relative z-20">
+        <button onclick="switchView('timer')" id="nav-timer" class="flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 bg-[#fd255b] text-white">
+            <i class="fa-solid fa-stopwatch"></i> 집중 타이머
+        </button>
+        <button onclick="switchView('calendar')" id="nav-calendar" class="flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 text-gray-500 hover:bg-pink-50 hover:text-pink-600">
+            <i class="fa-regular fa-calendar-days"></i> 나의 개화 달력
+        </button>
+    </nav>
+
+    <div id="view-timer" class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6" style="display: grid;">
+        <section class="lg:col-span-5 bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100 flex flex-col items-center">
+            <!--<div class="flex w-full bg-gray-50 rounded-full p-1 mb-8 border border-gray-100">
+                <button onclick="setPreset(25)" class="flex-1 py-2.5 bg-[#fd255b] text-white rounded-full text-xs font-bold shadow-sm transition">꽃 집중</button>
+                <button onclick="setPreset(5)" class="flex-1 py-2.5 text-gray-500 text-xs hover:bg-white rounded-full font-medium transition">짧은 휴식</button>
+                <button onclick="setPreset(15)" class="flex-1 py-2.5 text-gray-500 text-xs hover:bg-white rounded-full font-medium transition">긴 휴식</button>
+            </div>-->
+
+            <div class="relative w-56 h-56 rounded-full border-[10px] border-[#fd255b] flex flex-col items-center justify-center mb-8 bg-white" id="timer-circle">
+                <div class="text-5xl mb-2" id="current-flower-avatar">🌹</div>
+                <div id="timer-message" class="absolute -bottom-4 bg-pink-50 border border-pink-200 text-[#fd255b] text-xs font-bold py-1.5 px-4 rounded-full shadow-sm whitespace-nowrap transition-all">
+                    타이머를 시작하세요!
+                </div>
+            </div>
+
+            <div class="text-center mb-6 mt-2">
+                <div class="text-pink-500 text-xs font-bold tracking-[0.2em] mb-1">TIMER COUNTING</div>
+                <div class="text-5xl font-black tracking-wider text-gray-800" id="time-display">25:00</div>
+            </div>
+
+            <div class="flex w-full gap-2 mt-auto">
+                <button id="start-btn" onclick="toggleTimer()" class="flex-[3] bg-[#fd255b] hover:bg-[#e0194b] text-white py-3.5 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i> 집중 시작하기
+                </button>
+                <button onclick="resetTimer()" class="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-600 py-3.5 rounded-xl font-bold text-sm transition border border-gray-200 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> 재설정
+                </button>
+            </div>
+        </section>
+
+        <section class="lg:col-span-7 bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100 flex flex-col gap-6">
+            <div>
+                <h2 class="text-base font-bold flex items-center gap-2 mb-1 text-gray-800">
+                    <i class="fa-solid fa-seedling text-pink-500"></i> Nurture Flower Species (꽃 종류 선택)
+                </h2>
+                <p class="text-xs text-gray-400 mb-4">현재 집중하는 동안 정성껏 가꿀 꽃나뭇잎을 선택해 보세요.</p>
+                
+                <div class="grid grid-cols-5 gap-2" id="flower-options">
+                    <button onclick="selectFlower('🌹', '정열의 장미', this)" class="flower-btn border-2 border-[#fd255b] bg-pink-50 rounded-xl p-3 flex flex-col items-center gap-1.5 transition">
+                        <span class="text-2xl">🌹</span><span class="text-[10px] font-bold text-[#fd255b]">정열의 장미</span>
+                    </button>
+                    <button onclick="selectFlower('🌷', '수줍은 튤립', this)" class="flower-btn border border-gray-200 hover:border-pink-300 rounded-xl p-3 flex flex-col items-center gap-1.5 transition">
+                        <span class="text-2xl">🌷</span><span class="text-[10px] font-bold text-gray-500">수줍은 튤립</span>
+                    </button>
+                    <button onclick="selectFlower('🪻', '향긋한 라벤더', this)" class="flower-btn border border-gray-200 hover:border-pink-300 rounded-xl p-3 flex flex-col items-center gap-1.5 transition">
+                        <span class="text-2xl">🪻</span><span class="text-[10px] font-bold text-gray-500">향긋한 라벤더</span>
+                    </button>
+                    <button onclick="selectFlower('🌼', '행복한 데이지', this)" class="flower-btn border border-gray-200 hover:border-pink-300 rounded-xl p-3 flex flex-col items-center gap-1.5 transition">
+                        <span class="text-2xl">🌼</span><span class="text-[10px] font-bold text-gray-500">행복한 데이지</span>
+                    </button>
+                    <button onclick="selectFlower('🌻', '태양 해바라기', this)" class="flower-btn border border-gray-200 hover:border-pink-300 rounded-xl p-3 flex flex-col items-center gap-1.5 transition">
+                        <span class="text-2xl">🌻</span><span class="text-[10px] font-bold text-gray-500">태양 해바라기</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-100 pt-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-bold text-gray-800">집중 시간 설정</h3>
+                    <div class="bg-pink-50 text-[#fd255b] font-bold text-xs px-3 py-1 rounded-md border border-pink-100" id="slider-val-display">25분</div>
+                </div>
+                <input type="range" min="5" max="120" step="5" value="25" id="time-slider" oninput="updateSliderTime(this.value)">
+                <div class="flex justify-between text-[10px] text-gray-400 mt-1.5">
+                    <span>5분 (가벼운 리프레시)</span>
+                    <span>120분 (초고도 몰입)</span>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-100 pt-4">
+                <h3 class="text-sm font-bold text-gray-800 mb-2.5">간편 표준 집중 모드 예약</h3>
+                <div class="flex flex-wrap gap-1.5">
+                    <button onclick="setPreset(25)" class="border border-gray-200 hover:border-pink-200 hover:bg-pink-50/50 text-gray-600 text-xs py-2 px-3 rounded-lg font-medium transition">뽀모도로 (25분)</button>
+                    <button onclick="setPreset(45)" class="border border-gray-200 hover:border-pink-200 hover:bg-pink-50/50 text-gray-600 text-xs py-2 px-3 rounded-lg font-medium transition">정식 집중 (45분)</button>
+                    <button onclick="setPreset(60)" class="border border-gray-200 hover:border-pink-200 hover:bg-pink-50/50 text-gray-600 text-xs py-2 px-3 rounded-lg font-medium transition">몰입 공부 (60분)</button>
+                    <button onclick="setPreset(5)" class="border border-gray-200 hover:border-pink-200 hover:bg-pink-50/50 text-gray-600 text-xs py-2 px-3 rounded-lg font-medium transition">짧은 휴식 (5분)</button>
+                    <button onclick="setPreset(15)" class="border border-gray-200 hover:border-pink-200 hover:bg-pink-50/50 text-gray-600 text-xs py-2 px-3 rounded-lg font-medium transition">긴 휴식 (15분)</button>
+                </div>
+            </div>
+
+            <div class="bg-orange-50/50 rounded-2xl p-4 flex justify-between items-start border border-orange-100 mt-auto">
+                <div>
+                    <div class="text-orange-600 font-bold text-xs mb-1 flex items-center gap-1"><i class="fa-solid fa-wand-magic-sparkles"></i> 꽃밭의 향기</div>
+                    <p class="text-gray-600 italic text-xs">"자세히 보아야 예쁘다.오래 보아야 사랑스럽다. 너도 그렇다"</p>
+                </div>
+                <span class="text-[10px] text-gray-400 font-medium whitespace-nowrap">— 나태주 풀꽃</span>
+            </div>
+        </section>
+    </div>
+
+    <div id="view-calendar" class="max-w-6xl mx-auto flex flex-col gap-4" style="display: none;">
+        <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-pink-50 border border-pink-100 rounded-xl flex items-center justify-center text-[#fd255b] text-lg">
+                    <i class="fa-regular fa-calendar-check"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-bold text-gray-800">나의 매일 개화 타임라인 달력</h2>
+                    <p class="text-xs text-gray-400">이번 달과 한 주의 꽃 재배 성적을 시각적으로 확인해볼까요?</p>
+                </div>
+            </div>
+            <div class="bg-pink-50/80 border border-pink-100 text-[#fd255b] text-xs font-bold px-4 py-2 rounded-full self-stretch sm:self-auto text-center">
+                누적 집중 기록: <span id="weekly-top-badge">0분 (0송이)</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div class="lg:col-span-7 bg-white rounded-[1.5rem] p-6 shadow-sm border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="text-sm font-bold flex items-center gap-1.5 text-gray-700">
+                        <span class="text-pink-500">🌸</span> <span id="calendar-title">2026년 5월</span>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="prevMonth()" class="w-7 h-7 rounded-lg bg-gray-50 border border-gray-200 text-gray-400 flex items-center justify-center hover:bg-gray-100"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                        <button onclick="nextMonth()" class="w-7 h-7 rounded-lg bg-gray-50 border border-gray-200 text-gray-400 flex items-center justify-center hover:bg-gray-100"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-7 text-center font-bold text-xs text-gray-400 mb-3">
+                    <div class="text-red-400">일</div>
+                    <div>월</div>
+                    <div>화</div>
+                    <div>수</div>
+                    <div>목</div>
+                    <div>금</div>
+                    <div class="text-blue-400">토</div>
+                </div>
+
+                <div class="grid grid-cols-7 gap-2" id="calendar-days-grid">
+                    </div>
+            </div>
+
+            <div class="lg:col-span-5 flex flex-col gap-4">
+                <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border border-gray-100 flex-1 flex flex-col">
+                    <div class="flex justify-between items-center border-b border-gray-50 pb-3 mb-4">
+                        <h3 class="text-sm font-bold text-gray-700 flex items-center gap-1.5">
+                            <i class="fa-solid fa-heart-pulse text-pink-500"></i> 선택 일자 화단 개화 이력
+                        </h3>
+                        <span id="selected-date-label" class="bg-pink-50 border border-pink-100 text-[#fd255b] font-bold text-[10px] px-2.5 py-1 rounded-full">-월 -일</span>
+                    </div>
+
+                    <div id="history-logs-container" class="flex-1 flex flex-col items-center justify-center text-center">
+                        </div>
+                </div>
+
+                <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-sm font-bold text-gray-700 flex items-center gap-1.5">
+                            <i class="fa-solid fa-chart-bar text-orange-400"></i> 최근 일주일 주간 집중 추이
+                        </h3>
+                        <span class="text-[10px] text-gray-400">주간 총합: <span id="chart-total-minutes" class="font-bold text-gray-600">0분</span></span>
+                    </div>
+
+                    <div class="flex justify-between items-end h-20 px-2 pt-2 border-b border-gray-100" id="weekly-bar-chart">
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="success-modal" class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-300">
+        <div id="modal-content" class="bg-white rounded-[2.5rem] p-6 w-11/12 max-w-sm text-center shadow-2xl transform scale-95 transition-transform duration-300">
+            <div class="w-20 h-20 bg-pink-50 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 animate-bounce">
+                <span id="modal-flower-emoji">🌹</span>
+            </div>
+            <h3 class="text-xl font-black text-gray-850 mb-1">집중 완주 성공! 🎉</h3>
+            <!--<p class="text-xs text-gray-400 mb-4 tracking-wide">MOLIP SUCCESS</p>-->
+            <p class="text-sm text-gray-600 leading-relaxed mb-6 px-2">
+                정원에 아름다운 <span id="modal-flower-name" class="font-extrabold text-[#fd255b]">정열의 장미</span> 한 송이가 활짝 피어 달력에 예쁘게 기록되었습니다!
+            </p>
+            <button onclick="closeSuccessModal()" class="w-full bg-[#fd255b] hover:bg-[#e0194b] active:scale-98 text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition-all">
+                내 정원 확인하기
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 현재 날짜 기준 자동 파싱 및 상태 초기화
+        const todayObj = new Date();
+        let viewYear = todayObj.getFullYear();
+        let viewMonth = todayObj.getMonth() + 1;
+        
+        function getDateStr(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+            const d = dateObj.getDate().toString().padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        let selectedDate = getDateStr(todayObj);
+        
+        // [수정] 5월 21일 샘플 데이터 제거 및 로컬스토리지 연동 완료
+        let focusHistory = JSON.parse(localStorage.getItem('focusHistory')) || [];
+        
+        let timeLeft = 25 * 60;
+        let endTime = null;
+        let timerId = null;
+        let isRunning = false;
+        let selectedFlowerEmoji = '🌹';
+        let selectedFlowerName = '정열의 장미';
+
+        const timeDisplay = document.getElementById('time-display');
+        const startBtn = document.getElementById('start-btn');
+        const timerCircle = document.getElementById('timer-circle');
+        const timeSlider = document.getElementById('time-slider');
+        const sliderValDisplay = document.getElementById('slider-val-display');
+        const timerMessage = document.getElementById('timer-message');
+
+        document.getElementById('selected-date-label').textContent = `${viewMonth}월 ${todayObj.getDate()}일`;
+
+        // 뷰 전환 제어 함수
+        function switchView(viewName) {
+            const timerView = document.getElementById('view-timer');
+            const calendarView = document.getElementById('view-calendar');
+            const navTimer = document.getElementById('nav-timer');
+            const navCalendar = document.getElementById('nav-calendar');
+
+            if (viewName === 'timer') {
+                timerView.style.setProperty('display', 'grid', 'important');
+                calendarView.style.setProperty('display', 'none', 'important');
+                navTimer.className = "flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 bg-[#fd255b] text-white";
+                navCalendar.className = "flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 text-gray-500 hover:bg-pink-50 hover:text-pink-600";
+            } else {
+                timerView.style.setProperty('display', 'none', 'important');
+                calendarView.style.setProperty('display', 'flex', 'important');
+                navTimer.className = "flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 text-gray-500 hover:bg-pink-50 hover:text-pink-600";
+                navCalendar.className = "flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 bg-[#fd255b] text-white";
+                renderCalendarDashboard();
+            }
+        }
+
+        // 타이머 카운트다운 코어 엔진
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function updateDisplay() {
+            timeDisplay.textContent = formatTime(timeLeft);
+        }
+
+        function syncTimer() {
+            if (!isRunning || !endTime) return;
+            let remaining = Math.ceil((endTime - Date.now()) / 1000);
+
+            if (remaining <= 0) {
+                clearInterval(timerId);
+                timerId = null;
+                isRunning = false;
+                timeLeft = 0;
+                updateDisplay();
+                completeSession();
+            } else {
+                if (timeLeft !== remaining) {
+                    timeLeft = remaining;
+                    updateDisplay();
+                }
+            }
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                clearInterval(timerId);
+                timerId = null;
+                endTime = null;
+                startBtn.innerHTML = '<i class="fa-solid fa-play"></i> 집중 계속하기';
+                startBtn.classList.remove('bg-gray-500');
+                startBtn.classList.add('bg-[#fd255b]');
+                timerCircle.classList.remove('timer-active');
+                timerMessage.textContent = '타이머를 시작하세요!';
+            } else {
+                endTime = Date.now() + (timeLeft * 1000);
+                timerId = setInterval(syncTimer, 250);
+                startBtn.innerHTML = '<i class="fa-solid fa-pause"></i> 일시정지';
+                startBtn.classList.remove('bg-[#fd255b]');
+                startBtn.classList.add('bg-gray-500');
+                timerCircle.classList.add('timer-active');
+                timerMessage.textContent = '집중!';
+            }
+            isRunning = !isRunning;
+        }
+
+        function resetTimer() {
+            if (timerId) {
+                clearInterval(timerId);
+                timerId = null;
+            }
+            isRunning = false;
+            endTime = null;
+            timeLeft = parseInt(timeSlider.value) * 60;
+            updateDisplay();
+            startBtn.innerHTML = '<i class="fa-solid fa-play"></i> 집중 시작하기';
+            startBtn.classList.remove('bg-gray-500');
+            startBtn.classList.add('bg-[#fd255b]');
+            timerCircle.classList.remove('timer-active');
+            timerMessage.textContent = '타이머를 시작하세요!';
+        }
+
+        function updateSliderTime(minutes) {
+            sliderValDisplay.textContent = `${minutes}분`;
+            if (!isRunning) {
+                timeLeft = minutes * 60;
+                updateDisplay();
+            }
+        }
+
+        function setPreset(minutes) {
+            timeSlider.value = minutes;
+            updateSliderTime(minutes);
+        }
+
+        function selectFlower(emoji, name, element) {
+            selectedFlowerEmoji = emoji;
+            selectedFlowerName = name;
+            document.getElementById('current-flower-avatar').textContent = emoji;
+            
+            document.querySelectorAll('.flower-btn').forEach(btn => {
+                btn.className = "flower-btn border border-gray-200 hover:border-pink-300 rounded-xl p-3 flex flex-col items-center gap-1.5 transition";
+                btn.querySelector('span:nth-child(2)').className = "text-[10px] font-bold text-gray-500";
+            });
+
+            element.className = "flower-btn border-2 border-[#fd255b] bg-pink-50 rounded-xl p-3 flex flex-col items-center gap-1.5 transition";
+            element.querySelector('span:nth-child(2)').className = "text-[10px] font-bold text-[#fd255b]";
+        }
+
+        // 🌟 [추가] Web Audio API 기반 하드웨어 주파수 알림음 생성기 (맑은 실로폰 3단음)
+        function playSuccessChime() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+                
+                // 도-미-솔 상큼한 세 화음 연속 재생
+                const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+                notes.forEach((freq, index) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + (index * 0.12));
+                    
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime + (index * 0.12));
+                    // 부드러운 여운を残하며 사라지게 조정
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + (index * 0.12) + 0.4);
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    
+                    osc.start(ctx.currentTime + (index * 0.12));
+                    osc.stop(ctx.currentTime + (index * 0.12) + 0.4);
+                });
+            } catch (e) {
+                console.log("Audio play blocked or unsupported:", e);
+            }
+        }
+
+        // 🌟 [추가] 모바일 햅틱 진동 유도 엔진 (쌍진동 효과)
+        function triggerHapticVibration() {
+            if (navigator.vibrate) {
+                // 200ms 진동 -> 100ms 대기 -> 200ms 진동 (앱 알림 스타일)
+                navigator.vibrate([200, 100, 200]);
+            }
+        }
+
+        // 집중 성공 시 실시간 로컬스토리지 영구 기록 및 모달 연결
+        function completeSession() {
+            const durationMin = parseInt(timeSlider.value);
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+            const todayStr = getDateStr(now);
+            
+            focusHistory.push({
+                date: todayStr,
+                flower: selectedFlowerEmoji,
+                name: selectedFlowerName,
+                duration: durationMin,
+                timestamp: timeStr
+            });
+
+            localStorage.setItem('focusHistory', JSON.stringify(focusHistory));
+
+            selectedDate = todayStr;
+            viewYear = now.getFullYear();
+            viewMonth = now.getMonth() + 1;
+            document.getElementById('selected-date-label').textContent = `${viewMonth}월 ${now.getDate()}일`;
+
+            // 🌟 하드웨어 알림 제어 컴포넌트 작동
+            playSuccessChime();
+            triggerHapticVibration();
+
+            // 커스텀 모달 오픈
+            showSuccessModal(selectedFlowerEmoji, selectedFlowerName);
+            
+            resetTimer();
+            renderCalendarDashboard();
+        }
+
+        // 모바일 맞춤형 축하 모달 제어 함수
+        function showSuccessModal(emoji, name) {
+            const modal = document.getElementById('success-modal');
+            const content = document.getElementById('modal-content');
+            document.getElementById('modal-flower-emoji').textContent = emoji;
+            document.getElementById('modal-flower-name').textContent = name;
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeSuccessModal() {
+            const modal = document.getElementById('success-modal');
+            const content = document.getElementById('modal-content');
+            
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+            switchView('calendar');
+        }
+
+        // 모바일 화면 백그라운드 리싱크 처리
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && isRunning) syncTimer();
+        });
+        window.addEventListener('focus', () => {
+            if (isRunning) syncTimer();
+        });
+
+        // 달력 이전 달 / 다음 달 동적 연산
+        function prevMonth() {
+            viewMonth--;
+            if (viewMonth < 1) {
+                viewMonth = 12;
+                viewYear--;
+            }
+            renderCalendarDashboard();
+        }
+
+        function nextMonth() {
+            viewMonth++;
+            if (viewMonth > 12) {
+                viewMonth = 1;
+                viewYear++;
+            }
+            renderCalendarDashboard();
+        }
+
+        // 달력 컴포넌트 데이터 시각화 리포트 대시보드 렌더링
+        function renderCalendarDashboard() {
+            renderCalendarGrid();
+            renderHistoryLogs();
+            renderWeeklyChart();
+            updateTopSummaryBadges();
+        }
+
+        function updateTopSummaryBadges() {
+            let totalMinutes = focusHistory.reduce((sum, item) => sum + item.duration, 0);
+            let totalFlowers = focusHistory.length;
+            
+            const textString = `${totalMinutes}분 (${totalFlowers}송이)`;
+            document.getElementById('weekly-top-badge').textContent = textString;
+            document.getElementById('chart-total-minutes').textContent = textString;
+        }
+
+        function renderCalendarGrid() {
+            const gridContainer = document.getElementById('calendar-days-grid');
+            gridContainer.innerHTML = '';
+
+            document.getElementById('calendar-title').textContent = `${viewYear}년 ${viewMonth}월`;
+
+            const firstDayIndex = new Date(viewYear, viewMonth - 1, 1).getDay();
+            const totalDays = new Date(viewYear, viewMonth, 0).getDate();
+
+            for (let i = 0; i < firstDayIndex; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = "min-h-[58px]";
+                gridContainer.appendChild(emptyCell);
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dayStr = `${viewYear}-${viewMonth.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                const dayLogs = focusHistory.filter(item => item.date === dayStr);
+                
+                const cell = document.createElement('div');
+                let bgStyle = "bg-white border border-gray-100";
+                if (dayLogs.length > 0) bgStyle = "bg-pink-50 border border-pink-200 shadow-xs"; 
+                
+                let selectedStyle = "";
+                if (dayStr === selectedDate) selectedStyle = "ring-2 ring-[#fd255b] border-transparent z-10 shadow-sm"; 
+
+                cell.className = `min-h-[58px] p-1.5 rounded-xl flex flex-col justify-between cursor-pointer transition-all hover:bg-pink-100/50 ${bgStyle} ${selectedStyle}`;
+                
+                const numLabel = document.createElement('span');
+                numLabel.textContent = day;
+                
+                const dayOfWeek = (firstDayIndex + day - 1) % 7;
+                if (dayOfWeek === 0) numLabel.className = "text-[11px] font-bold text-red-400"; 
+                else if (dayOfWeek === 6) numLabel.className = "text-[11px] font-bold text-blue-400"; 
+                else numLabel.className = "text-[11px] font-bold text-gray-400";
+
+                cell.appendChild(numLabel);
+
+                if (dayLogs.length > 0) {
+                    const flowerMarker = document.createElement('div');
+                    flowerMarker.className = "text-right text-xs leading-none mt-1";
+                    flowerMarker.textContent = dayLogs[dayLogs.length - 1].flower; 
+                    cell.appendChild(flowerMarker);
+                } else {
+                    const emptySpacer = document.createElement('div');
+                    cell.appendChild(emptySpacer);
+                }
+
+                cell.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    selectedDate = dayStr;
+                    document.getElementById('selected-date-label').textContent = `${viewMonth}월 ${day}일`;
+                    renderCalendarDashboard();
+                });
+
+                gridContainer.appendChild(cell);
+            }
+        }
+
+        function renderHistoryLogs() {
+            const container = document.getElementById('history-logs-container');
+            container.innerHTML = '';
+
+            const dayLogs = focusHistory.filter(item => item.date === selectedDate);
+
+            if (dayLogs.length === 0) {
+                container.className = "flex-1 flex flex-col items-center justify-center text-center p-6 text-gray-400";
+                container.innerHTML = `
+                    <div class="text-3xl mb-2 text-pink-200"><i class="fa-regular fa-heart"></i></div>
+                    <p class="text-xs font-semibold text-gray-600 mb-0.5">아직 꽃이 피지 않았습니다</p>
+                    <p class="text-[11px] text-gray-400 max-w-[220px]">타이머를 완료시키면 몰입의 결과가 화단에 예쁘게 장식됩니다.</p>
+                `;
+            } else {
+                container.className = "flex-1 flex flex-col gap-2 w-full pt-1 overflow-y-auto";
+                dayLogs.forEach(log => {
+                    const row = document.createElement('div');
+                    row.className = "flex items-center justify-between bg-pink-50/50 border border-pink-100 p-3 rounded-xl";
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl">${log.flower}</span>
+                            <div class="text-left">
+                                <p class="text-xs font-bold text-gray-700">${log.name}</p>
+                                <p class="text-[10px] text-gray-400">${log.timestamp} 개화 완료</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-bold text-[#fd255b] bg-white px-2 py-0.5 rounded-md border border-pink-100">${log.duration}분</span>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+        }
+
+        function renderWeeklyChart() {
+            const chartContainer = document.getElementById('weekly-bar-chart');
+            chartContainer.innerHTML = '';
+
+            const dayLabels = ['일', '월', '화', '수', '목', '금', '토'];
+            const daysToTrack = [];
+            const coreToday = new Date();
+
+            for (let i = 6; i >= 0; i--) {
+                const targetDay = new Date();
+                targetDay.setDate(coreToday.getDate() - i);
+                const targetStr = getDateStr(targetDay);
+                
+                let displayName = `${dayLabels[targetDay.getDay()]}(${targetDay.getDate()})`;
+                if (i === 0) displayName = `${dayLabels[targetDay.getDay()]}(오늘)`;
+
+                daysToTrack.push({
+                    name: displayName,
+                    date: targetStr,
+                    isToday: i === 0
+                });
+            }
+
+            daysToTrack.forEach(dayInfo => {
+                const dayLogs = focusHistory.filter(item => item.date === dayInfo.date);
+                const dailyMinutes = dayLogs.reduce((sum, current) => sum + current.duration, 0);
+
+                const maxTarget = 60; 
+                const percentage = Math.min((dailyMinutes / maxTarget) * 100, 100);
+                
+                const col = document.createElement('div');
+                col.className = "flex flex-col items-center gap-1.5 flex-1 group";
+
+                const valTip = document.createElement('span');
+                valTip.className = "text-[9px] font-bold text-[#fd255b] h-3";
+                valTip.textContent = dailyMinutes > 0 ? `${dailyMinutes}분` : '';
+
+                const barWrapper = document.createElement('div');
+                barWrapper.className = "w-4 bg-gray-50 border border-gray-100 rounded-t-md h-12 flex items-end justify-center relative overflow-hidden";
+                
+                const barFill = document.createElement('div');
+                barFill.className = dayInfo.isToday ? "w-full bg-[#fd255b] transition-all duration-500" : "w-full bg-pink-300 transition-all duration-500";
+                barFill.style.height = dailyMinutes > 0 ? `${percentage}%` : '0%';
+
+                barWrapper.appendChild(barFill);
+
+                const label = document.createElement('span');
+                label.className = dayInfo.isToday ? "text-[9px] font-bold text-[#fd255b]" : "text-[9px] text-gray-400";
+                label.textContent = dayInfo.name;
+
+                col.appendChild(valTip);
+                col.appendChild(barWrapper);
+                col.appendChild(label);
+
+                chartContainer.appendChild(col);
+            });
+        }
+
+        // 초기화 가동
+        updateDisplay();
+        renderCalendarDashboard();
+    </script>
+</body>
+</html>
